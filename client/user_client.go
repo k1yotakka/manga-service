@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
 )
@@ -15,12 +16,16 @@ type User struct {
 
 func GetUserByID(id uint) (*User, error) {
 	resp, err := Client.R().
-		SetResult(&User{}).
-		Get(fmt.Sprintf("http://localhost:8001/api/users/%d", id))
+		Get(fmt.Sprintf("http://user-service:8001/api/users/%d", id))
 
 	if err != nil {
 		return nil, err
 	}
 
-	return resp.Result().(*User), nil
+	var user User
+	if err := json.Unmarshal(resp.Body(), &user); err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }
