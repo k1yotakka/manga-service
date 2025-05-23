@@ -24,34 +24,48 @@ func GetMangaList(c *gin.Context) {
 	}
 	offset := (page - 1) * limit
 
-	query := database.DB.Limit(limit).Offset(offset)
+	// Запрос с фильтрацией
+	query := database.DB.Model(&models.Manga{})
 	if genre != "" {
 		query = query.Where("genre = ?", genre)
 	}
 
-	if err := query.Find(&manga).Error; err != nil {
+	// Получаем общее количество
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при подсчёте total"})
+		return
+	}
+
+	// Получаем текущую страницу
+	if err := query.Limit(limit).Offset(offset).Find(&manga).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
 		return
 	}
 
+	// Возвращаем данные + total
 	c.JSON(http.StatusOK, gin.H{
 		"data":  manga,
 		"page":  page,
 		"limit": limit,
+		"total": total,
 	})
 }
 
 func CreateManga(c *gin.Context) {
-	var manga models.Manga
+	title := c.PostForm("title")
+	description := c.PostForm("description")
+	genre := c.PostForm("genre")
 
-	if err := c.ShouldBindJSON(&manga); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат JSON"})
+	if title == "" || description == "" || genre == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Все поля обязательны"})
 		return
 	}
 
-	if manga.Title == "" || manga.Description == "" || manga.Genre == "" || manga.Cover == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Все поля должны быть заполнены"})
-		return
+	manga := models.Manga{
+		Title:       title,
+		Description: description,
+		Genre:       genre,
 	}
 
 	if err := database.DB.Create(&manga).Error; err != nil {
@@ -83,16 +97,19 @@ func UpdateManga(c *gin.Context) {
 		return
 	}
 
-	var updatedData models.Manga
-	if err := c.ShouldBindJSON(&updatedData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат JSON"})
-		return
-	}
+	title := c.PostForm("title")
+	description := c.PostForm("description")
+	genre := c.PostForm("genre")
 
-	manga.Title = updatedData.Title
-	manga.Description = updatedData.Description
-	manga.Genre = updatedData.Genre
-	manga.Cover = updatedData.Cover
+	if title != "" {
+		manga.Title = title
+	}
+	if description != "" {
+		manga.Description = description
+	}
+	if genre != "" {
+		manga.Genre = genre
+	}
 
 	if err := database.DB.Save(&manga).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при обновлении манги"})

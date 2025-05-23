@@ -5,5 +5,4 @@ type Manga struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Genre       string `json:"genre"`
-	Cover       string `json:"cover"`
 }

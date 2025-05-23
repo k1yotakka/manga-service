@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gin-contrib/cors"
 	"manga-catalog/database"
 	"manga-catalog/handlers"
 	"manga-catalog/middleware"
@@ -14,6 +15,14 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(middleware.LoggingMiddleware())
+	r.Static("/uploads", "./uploads")
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
 
 	api := r.Group("/api")
 	{
